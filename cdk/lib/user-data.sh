@@ -23,7 +23,9 @@ TEST_FILE=/home/ubuntu/user-data-has-run-once.test
 
 #This is just to run once since the above cloud_final_modules setting is set to run on every reboot 
 #An alternative is to run a systemd script that runs on every reboot to d/l a script from s3 and run that
-if test -f "$TEST_FILE"; then
+if [-f "$TEST_FILE"]
+then
+
 else
     sudo su
     apt update -y

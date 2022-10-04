@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as ecr from 'aws-cdk-lib/aws-ecr'
 import { Port, SecurityGroup, UserData, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import {readFileSync} from 'fs';
@@ -60,17 +61,9 @@ export class FirstCoinStack extends cdk.Stack {
       "Allow traffic for seed node"
     )
 
-    firstCoinSecurityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(8081),
-      "Allow traffic for node 2"
-    )
+    //Just create the docker repo
+    const repository = new ecr.Repository(this, 'FirstCoinRepository');
 
-    firstCoinSecurityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(8082),
-      "Allow traffic for node 3"
-    )
 
     // See https://loige.co/provision-ubuntu-ec2-with-cdk/
     // and https://discourse.ubuntu.com/t/finding-ubuntu-images-with-the-aws-ssm-parameter-store/15507
