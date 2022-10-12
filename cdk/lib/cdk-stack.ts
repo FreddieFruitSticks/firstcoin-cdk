@@ -1,9 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr'
+import * as iam from 'aws-cdk-lib/aws-iam';
 import { Port, SecurityGroup, UserData, Vpc } from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import {readFileSync} from 'fs';
+import { Effect } from 'aws-cdk-lib/aws-iam';
 
 
 //Good CDK resources
@@ -55,14 +57,42 @@ export class FirstCoinStack extends cdk.Stack {
       "Allow all HTTPS traffic"
     )
 
-    firstCoinSecurityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.tcp(8080),
-      "Allow traffic for seed node"
-    )
+    const FirstcoinECRPolicy = new iam.PolicyDocument({
+      statements: [
+        new iam.PolicyStatement({
+          resources: ['arn:aws:ecr:eu-west-1:525135309370:repository/firstcoinstack-firstcoinrepository4a4774a5-brndmcpptvud'],
+          actions: [
+            "ecr:GetDownloadUrlForLayer",
+            "ecr:BatchGetImage"        
+          ],
+          effect: Effect.ALLOW
+        }),
+      ],
+    });
 
-    //Just create the docker repo
-    const repository = new ecr.Repository(this, 'FirstCoinRepository');
+    const FirstcoinECRAuthPolicy = new iam.PolicyDocument({
+      statements: [
+        new iam.PolicyStatement({
+          resources: ['*'],
+          actions: [
+            "ecr:GetAuthorizationToken"
+        ],
+          effect: Effect.ALLOW
+        }),
+      ],
+    });
+
+    const FirstcoinRole = new iam.Role(this, "FirstcoinECRAccess", {
+      assumedBy: new iam.ServicePrincipal("ec2.amazonaws.com"),
+      description: 'Firstcoin EC2 role',
+      inlinePolicies:{
+        FirstcoinECRPolicy: FirstcoinECRPolicy,
+        FirstcoinECRAuthPolicy: FirstcoinECRAuthPolicy
+      }
+    })
+
+    //Just create the docker repo manually rather
+    // const repository = new ecr.Repository(this, 'FirstCoinRepository');
 
 
     // See https://loige.co/provision-ubuntu-ec2-with-cdk/
@@ -76,9 +106,10 @@ export class FirstCoinStack extends cdk.Stack {
     //https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ec2.CfnKeyPair.html
     //private key is saved to Systems Manager parameter under /ec2/keypair/<keypair-id>
     //to ssh sudo ssh -i ../.ssh/firstcoin-ssh-key-pair-1.pem ubuntu@ec2-52-16-105-46.eu-west-1.compute.amazonaws.com
-    const firstcoinKeyPair = new ec2.CfnKeyPair(this, "firstcoin-ssh-key-pair-1", {
-      keyName: 'firstcoin-ssh-key-pair-1',
-    })
+    //Note: I dont use this key any longer. Much easier to manually create it.
+    // const firstcoinKeyPair = new ec2.CfnKeyPair(this, "firstcoin-ssh-key-pair-1", {
+    //   keyName: 'firstcoin-ssh-key-pair-1',
+    // })
 
 
     const ec2Instance = new ec2.Instance(this, "FirstCoinEC2Instance", {
@@ -92,7 +123,8 @@ export class FirstCoinStack extends cdk.Stack {
         ec2.InstanceSize.MICRO
       ),
       machineImage: ubuntuMachineImage,
-      keyName: 'firstcoin-ssh-key-pair-1'
+      keyName: 'firstcoin-ssh-key-pair-2',
+      role: FirstcoinRole
     })
 
     const userDataScript = readFileSync('./lib/user-data.sh', 'utf8');

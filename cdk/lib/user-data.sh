@@ -52,5 +52,14 @@ else
     apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin -y
     service docker start
 
+    echo "installing aws cli ..."
+
+    apt install awscli -y
+
     touch $TEST_FILE
 fi
+
+echo "fetching firstcoin docker container..."
+
+aws ecr get-login-password --region eu-west-1 | docker login --username AWS --password-stdin 525135309370.dkr.ecr.eu-west-1.amazonaws.com
+docker pull 525135309370.dkr.ecr.eu-west-1.amazonaws.com/firstcoinstack-firstcoinrepository4a4774a5-brndmcpptvud
